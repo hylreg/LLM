@@ -1,16 +1,19 @@
 # LangChain 集成示例
 
-这个目录包含了使用 LangChain 集成 SiliconFlow 模型的示例代码。
+这个目录包含了使用 LangChain 集成不同模型的示例代码。
 
 ## 文件说明
 
 - [siliconflow_example.py](file:///Users/admin/Projects/LLM/test_langchain/siliconflow_example.py) - 使用 LangChain 原生方式集成 SiliconFlow 模型的示例
+- [structured_output_example.py](file:///Users/admin/Projects/LLM/test_langchain/structured_output_example.py) - 展示如何使用结构化输出的示例
+- [streaming_output_example.py](file:///Users/admin/Projects/LLM/test_langchain/streaming_output_example.py) - 展示如何实现流式输出的示例
+- [ollama_example.py](file:///Users/admin/Projects/LLM/test_langchain/ollama_example.py) - 使用 LangChain 集成本地 Ollama 模型的示例
 
 ## 使用方法
 
 ### 环境变量设置
 
-在运行示例之前，需要设置以下环境变量：
+对于 SiliconFlow 示例，需要设置以下环境变量：
 
 ```bash
 export SILICONFLOW_API_KEY=your_siliconflow_api_key
@@ -18,6 +21,8 @@ export SILICONFLOW_BASE_URL=https://api.siliconflow.cn/v1/  # 可选，默认值
 ```
 
 ### 运行示例
+
+#### SiliconFlow 示例
 
 ```bash
 python siliconflow_example.py
@@ -32,7 +37,46 @@ model = create_siliconflow_model()
 # 现在可以将此模型用于 LangChain 的各种功能，如 create_agent 等
 ```
 
+#### 结构化输出示例
+
+```bash
+python structured_output_example.py
+```
+
+#### 流式输出示例
+
+```bash
+# 查看演示
+python streaming_output_example.py
+
+# 进入交互模式
+python streaming_output_example.py interactive
+```
+
+#### Ollama 示例
+
+首先确保你已经安装并运行了 Ollama，并下载了所需的模型：
+
+```bash
+# 安装 Ollama (访问 https://ollama.com/ 获取安装方法)
+# 下载模型 (以 qwen3:0.6b 为例)
+ollama pull qwen3:0.6b
+# 运行 Ollama 服务 (通常安装后自动运行)
+```
+
+然后运行示例：
+
+```bash
+# 使用默认模型 (qwen3:0.6b)
+python ollama_example.py
+
+# 使用指定模型 (如 llama3)
+python ollama_example.py llama3
+```
+
 ## 代码说明
+
+### SiliconFlow 模型集成
 
 示例中使用了 LangChain 的 `init_chat_model` 函数来初始化 SiliconFlow 模型：
 
@@ -47,6 +91,21 @@ model = init_chat_model(
 ```
 
 这种方法的优势在于它是 LangChain 原生支持的方式，可以与其他 LangChain 组件无缝集成。
+
+### Ollama 模型集成
+
+对于本地 Ollama 模型，我们使用 `ChatOllama` 类：
+
+```python
+from langchain_ollama import ChatOllama
+
+model = ChatOllama(
+    model="qwen3:0.6b",  # 指定具体模型
+    temperature=0.7
+)
+```
+
+与 SiliconFlow 不同，Ollama 模型运行在本地，不需要 API 密钥。
 
 ## LangChain集成示例详细介绍
 
@@ -69,6 +128,27 @@ model = init_chat_model(
 from langchain.agents import create_agent
 agent = create_agent(
     llm=model,
+    # 其他参数...
+)
+```
+
+### 使用 `ChatOllama` 类
+
+对于本地 Ollama 模型，使用专门的 `ChatOllama` 类：
+
+```python
+from langchain_ollama import ChatOllama
+
+# 配置本地 Ollama 模型
+llm = ChatOllama(
+    model="qwen3:0.6b",      # 指定本地模型名称
+    temperature=0.7
+)
+
+# 使用该模型创建agent
+from langchain.agents import create_agent
+agent = create_agent(
+    llm=llm,
     # 其他参数...
 )
 ```
