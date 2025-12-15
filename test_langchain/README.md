@@ -1,219 +1,237 @@
 # LangChain 集成示例
 
-这个目录包含了使用 LangChain 集成不同模型的示例代码。
+本目录包含了使用 LangChain 集成不同大语言模型的完整示例代码，涵盖了多种使用场景。
 
 ## 文件说明
 
-- [siliconflow_example.py](file:///Users/admin/Projects/LLM/test_langchain/siliconflow_example.py) - 使用 LangChain 原生方式集成 SiliconFlow 模型的示例
-- [structured_output_example.py](file:///Users/admin/Projects/LLM/test_langchain/structured_output_example.py) - 展示如何使用结构化输出的示例
-- [streaming_output_example.py](file:///Users/admin/Projects/LLM/test_langchain/streaming_output_example.py) - 展示如何实现流式输出的示例
-- [ollama_example.py](file:///Users/admin/Projects/LLM/test_langchain/ollama_example.py) - 使用 LangChain 集成本地 Ollama 模型的示例
+- **siliconflow_example.py** - 使用 LangChain 集成 Silicon Flow 模型的示例
+- **ollama_example.py** - 使用 LangChain 集成本地 Ollama 模型的示例
+- **structured_output_example.py** - 展示如何使用结构化输出的示例
+- **streaming_output_example.py** - 展示如何实现流式输出的示例
 
-## 使用方法
+## 环境配置
 
-### 环境变量设置
+### Silicon Flow
 
-对于 SiliconFlow 示例，需要设置以下环境变量：
+对于 Silicon Flow 相关示例（`siliconflow_example.py`、`structured_output_example.py`、`streaming_output_example.py`），需要设置环境变量：
 
 ```bash
 export SILICONFLOW_API_KEY=your_siliconflow_api_key
 export SILICONFLOW_BASE_URL=https://api.siliconflow.cn/v1/  # 可选，默认值
 ```
 
-### 运行示例
+**获取 API 密钥**：访问 [Silicon Flow 官网](https://www.siliconflow.cn/)，注册账号后可在控制台获取。
 
-#### SiliconFlow 示例
+### Ollama
+
+对于 Ollama 示例（`ollama_example.py`），需要：
+
+1. **安装 Ollama**：访问 [Ollama 官网](https://ollama.com/) 获取安装方法
+2. **启动服务**：Ollama 安装后通常会自动启动，也可手动运行 `ollama serve`
+3. **下载模型**：
+   ```bash
+   ollama pull qwen3:0.6b
+   ```
+
+**查看可用模型**：`ollama list`
+
+## 示例使用说明
+
+### 1. Silicon Flow 基础示例
+
+**文件**：`siliconflow_example.py`
+
+演示如何使用 LangChain 的 `init_chat_model` 函数集成 Silicon Flow 模型。
 
 ```bash
-python siliconflow_example.py
+python test_langchain/siliconflow_example.py
 ```
 
-或者在其他代码中导入使用：
+**代码示例**：
 
 ```python
 from test_langchain.siliconflow_example import create_siliconflow_model
+from langchain_core.messages import HumanMessage
 
 model = create_siliconflow_model()
-# 现在可以将此模型用于 LangChain 的各种功能，如 create_agent 等
+messages = [HumanMessage(content="你好，请简单介绍一下你自己")]
+response = model.invoke(messages)
+print(response.content)
 ```
 
-#### 结构化输出示例
+### 2. Ollama 本地模型示例
 
-```bash
-python structured_output_example.py
-```
+**文件**：`ollama_example.py`
 
-#### 流式输出示例
-
-```bash
-# 查看演示
-python streaming_output_example.py
-
-# 进入交互模式
-python streaming_output_example.py interactive
-```
-
-#### Ollama 示例
-
-首先确保你已经安装并运行了 Ollama，并下载了所需的模型：
-
-```bash
-# 安装 Ollama (访问 https://ollama.com/ 获取安装方法)
-# 下载模型 (以 qwen3:0.6b 为例)
-ollama pull qwen3:0.6b
-# 运行 Ollama 服务 (通常安装后自动运行)
-```
-
-然后运行示例：
+演示如何使用 LangChain 集成本地运行的 Ollama 模型，包括简单调用、流式输出、提示模板和多轮对话等功能。
 
 ```bash
 # 使用默认模型 (qwen3:0.6b)
-python ollama_example.py
+python test_langchain/ollama_example.py
 
-# 使用指定模型 (如 llama3)
-python ollama_example.py llama3
+# 使用指定模型
+python test_langchain/ollama_example.py llama3
 ```
 
-## 代码说明
-
-### SiliconFlow 模型集成
-
-示例中使用了 LangChain 的 `init_chat_model` 函数来初始化 SiliconFlow 模型：
+**代码示例**：
 
 ```python
+from langchain_ollama import ChatOllama
+
+model = ChatOllama(model="qwen3:0.6b", temperature=0.7)
+response = model.invoke("请简单介绍一下Python编程语言")
+print(response.content)
+```
+
+### 3. 流式输出示例
+
+**文件**：`streaming_output_example.py`
+
+演示如何实现流式输出，模拟打字机效果逐步显示模型的回复。
+
+```bash
+# 查看演示
+python test_langchain/streaming_output_example.py
+
+# 进入交互模式
+python test_langchain/streaming_output_example.py interactive
+```
+
+**代码示例**：
+
+```python
+from test_langchain.streaming_output_example import create_siliconflow_model
+from langchain_core.messages import HumanMessage
+
+model = create_siliconflow_model()
+messages = [HumanMessage(content="请写一首关于人工智能的五言诗")]
+for chunk in model.stream(messages):
+    if chunk.content:
+        print(chunk.content, end="", flush=True)
+```
+
+### 4. 结构化输出示例
+
+**文件**：`structured_output_example.py`
+
+演示如何使用 Pydantic 模型从非结构化文本中提取结构化信息。
+
+```bash
+python test_langchain/structured_output_example.py
+```
+
+**代码示例**：
+
+```python
+from test_langchain.structured_output_example import extract_person_info
+
+text = "张三今年30岁，他擅长Python和Go语言。"
+result = extract_person_info(text)
+print(f"姓名: {result.name}, 年龄: {result.age}, 技能: {result.skills}")
+```
+
+## 技术实现
+
+### Silicon Flow 模型集成
+
+Silicon Flow 兼容 OpenAI API 规范，使用 LangChain 的 `init_chat_model` 函数：
+
+```python
+from langchain.chat_models import init_chat_model
+
 model = init_chat_model(
     model="Qwen/Qwen3-8B",
     model_provider="openai",
-    base_url=base_url,
-    api_key=api_key,
+    base_url="https://api.siliconflow.cn/v1/",
+    api_key="your_api_key",
     temperature=0.7
 )
 ```
 
-这种方法的优势在于它是 LangChain 原生支持的方式，可以与其他 LangChain 组件无缝集成。
+**优势**：
+- LangChain 原生支持，可与其他 LangChain 组件无缝集成
+- 兼容 OpenAI API，使用方式简单
+- 支持流式输出、结构化输出等高级功能
 
 ### Ollama 模型集成
 
-对于本地 Ollama 模型，我们使用 `ChatOllama` 类：
+使用 `ChatOllama` 类集成本地模型：
 
 ```python
 from langchain_ollama import ChatOllama
 
 model = ChatOllama(
-    model="qwen3:0.6b",  # 指定具体模型
-    temperature=0.7
+    model="qwen3:0.6b",
+    temperature=0.7,
+    num_predict=256
 )
 ```
 
-与 SiliconFlow 不同，Ollama 模型运行在本地，不需要 API 密钥。
+**特点**：
+- 本地运行，无需网络连接
+- 不需要 API 密钥
+- 支持多种开源模型
 
-## LangChain集成示例详细介绍
+### 结构化输出
 
-### 使用 `init_chat_model` 函数（推荐）
-
-这是LangChain较新版本提供的统一接口，可以直接指定模型提供商：
+使用 `with_structured_output` 方法结合 Pydantic 模型：
 
 ```python
-from langchain.chat_models import init_chat_model
+from pydantic import BaseModel, Field
+from typing import List
 
-# 初始化硅基流动的模型
-model = init_chat_model(
-    model="Qwen/Qwen3-8B",           # 指定具体模型
-    model_provider="openai",          # 指定提供商（硅基流动兼容OpenAI API）
-    base_url="https://api.siliconflow.cn/v1/",  # 硅基流动API地址
-    api_key="your_siliconflow_api_key"          # 你的API密钥
-)
+class PersonInfo(BaseModel):
+    name: str = Field(description="人物姓名")
+    age: int = Field(description="人物年龄")
+    skills: List[str] = Field(description="技能列表")
 
-# 使用模型创建agent
-from langchain.agents import create_agent
-agent = create_agent(
-    llm=model,
-    # 其他参数...
-)
+structured_llm = model.with_structured_output(PersonInfo)
+result = structured_llm.invoke("从文本中提取信息...")
 ```
 
-### 使用 `ChatOllama` 类
+### 流式输出
 
-对于本地 Ollama 模型，使用专门的 `ChatOllama` 类：
+使用 `stream` 方法实现流式输出：
 
 ```python
-from langchain_ollama import ChatOllama
-
-# 配置本地 Ollama 模型
-llm = ChatOllama(
-    model="qwen3:0.6b",      # 指定本地模型名称
-    temperature=0.7
-)
-
-# 使用该模型创建agent
-from langchain.agents import create_agent
-agent = create_agent(
-    llm=llm,
-    # 其他参数...
-)
+for chunk in model.stream(messages):
+    if chunk.content:
+        print(chunk.content, end="", flush=True)
 ```
 
-### 使用 `ChatOpenAI` 类
+## 可用模型
 
-由于硅基流动兼容OpenAI API，您可以直接使用LangChain的ChatOpenAI类：
+### Silicon Flow 模型
 
-```python
-from langchain_openai import ChatOpenAI
+- `Qwen/Qwen3-8B` - 通义千问 3 8B 模型（示例中默认使用）
+- `deepseek-ai/DeepSeek-V3` - DeepSeek V3 模型
+- `Qwen/Qwen2.5-72B-Instruct` - 通义千问 2.5 72B 指令模型
+- `THUDM/glm-4-9b-chat` - GLM-4 9B 对话模型
 
-# 配置硅基流动模型
-llm = ChatOpenAI(
-    base_url="https://api.siliconflow.cn/v1",
-    api_key="your_siliconflow_api_key",
-    model="Qwen/Qwen3-8B",
-    temperature=0.7
-)
+更多模型信息请访问 [Silicon Flow 官网](https://www.siliconflow.cn/)。
 
-# 使用该模型创建agent
-from langchain.agents import create_agent
-agent = create_agent(
-    llm=llm,
-    # 其他参数...
-)
-```
+### Ollama 模型
 
-## Silicon Flow模型使用说明
+- `qwen3:0.6b` - 通义千问 3 0.6B 模型（示例中默认使用）
+- `llama3` - Meta Llama 3 模型
+- `mistral` - Mistral 模型
+- `gemma` - Google Gemma 模型
 
-Silicon Flow提供了多种大语言模型，包括但不限于:
-- Qwen/Qwen3-8B (默认使用)
-- deepseek-ai/DeepSeek-V3
-- Qwen/Qwen2.5-72B-Instruct
-- THUDM/glm-4-9b-chat
+更多模型信息请访问 [Ollama 官网](https://ollama.com/)。
 
-这些模型都可以通过上述两种方式与LangChain原生集成。
+## 常见问题
 
-### 在代码中使用模型
+**Q: 流式输出不显示怎么办？**  
+A: 确保在打印时使用 `flush=True` 参数，并检查终端是否支持实时输出。
 
-```python
-from langchain.models import get_silicon_flow_model, QWEN3_8B
+**Q: 如何查看可用的 Ollama 模型？**  
+A: 运行 `ollama list` 命令。
 
-# 获取模型实例（默认使用Qwen/Qwen3-8B）
-model = get_silicon_flow_model()
+**Q: 如何下载新的 Ollama 模型？**  
+A: 运行 `ollama pull <model_name>` 命令。
 
-# 或者显式指定模型
-model = get_silicon_flow_model(QWEN3_8B, temperature=0.7)
+## 更多资源
 
-# 调用模型
-response = model.invoke("你好，请简单介绍一下你自己")
-print(response.content)
-```
-
-### 使用对话链
-
-```python
-from langchain.models import get_silicon_flow_model
-from langchain.chains import chat_with_model
-from langchain_core.messages import HumanMessage, AIMessage
-
-model = get_silicon_flow_model()
-history = [
-    HumanMessage(content="你能告诉我什么是大语言模型吗？"),
-    AIMessage(content="大语言模型是一种基于大量文本数据训练的深度学习模型...")
-]
-
-response = chat_with_model(model, "那它们有什么应用场景呢？", history)
-```
+- [LangChain 官方文档](https://python.langchain.com/)
+- [Silicon Flow 文档](https://www.siliconflow.cn/)
+- [Ollama 文档](https://ollama.com/)
