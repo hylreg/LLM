@@ -89,7 +89,16 @@ uv run test_langchain/streaming_output_example.py
 uv run test_langchain/structured_output_example.py
 
 # 运行 VibeVoice TTS 示例（详细说明请参考 examples/vibevoice/README.md）
+# 先下载模型（推荐，约 1GB）
+uv run examples/vibevoice/vibevoice_example.py --download-only
+
+# 下载并运行基础示例
+uv run examples/vibevoice/vibevoice_example.py --download
+
+# 运行基础示例（首次运行会自动下载模型）
 uv run examples/vibevoice/vibevoice_example.py
+
+# 运行流式示例
 uv run examples/vibevoice/vibevoice_example.py --streaming
 ```
 
@@ -106,7 +115,16 @@ python test_langchain/streaming_output_example.py
 python test_langchain/structured_output_example.py
 
 # 运行 VibeVoice TTS 示例（详细说明请参考 examples/vibevoice/README.md）
+# 先下载模型（推荐，约 1GB）
+python examples/vibevoice/vibevoice_example.py --download-only
+
+# 下载并运行基础示例
+python examples/vibevoice/vibevoice_example.py --download
+
+# 运行基础示例（首次运行会自动下载模型）
 python examples/vibevoice/vibevoice_example.py
+
+# 运行流式示例
 python examples/vibevoice/vibevoice_example.py --streaming
 ```
 
@@ -119,6 +137,7 @@ python examples/vibevoice/vibevoice_example.py --streaming
 - `transformers>=4.40.0` - Hugging Face Transformers（用于 VibeVoice）
 - `torch>=2.0.0` - PyTorch（用于 VibeVoice）
 - `soundfile>=0.12.0` - 音频文件处理（用于 VibeVoice）
+- `huggingface_hub>=0.20.0` - Hugging Face Hub（用于下载模型）
 
 ## 更多信息
 

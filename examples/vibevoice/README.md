@@ -41,20 +41,85 @@ pip install -e .
 
 ## 运行示例
 
-### 1. 使用官方演示脚本
+### 1. 下载模型（推荐先下载）
+
+**推荐使用镜像站点下载**（适合中国大陆用户，速度更快）：
 
 ```bash
-# 在 VibeVoice 目录中运行
-cd VibeVoice/
-python demo/vibevoice_realtime_demo.py --model_path microsoft/VibeVoice-Realtime-0.5B
+# 使用镜像站点下载模型（推荐，约 2GB）
+uv run examples/vibevoice/vibevoice_example.py --download-only --mirror
+
+# 使用镜像站点下载并运行基础示例
+uv run examples/vibevoice/vibevoice_example.py --download --mirror
+
+# 使用镜像站点下载并运行流式示例
+uv run examples/vibevoice/vibevoice_example.py --download --streaming --mirror
 ```
 
-### 2. 使用项目中的示例脚本
+**或使用官方站点下载**：
+
+```bash
+# 仅下载模型（约 2GB，首次运行建议先下载）
+uv run examples/vibevoice/vibevoice_example.py --download-only
+
+# 下载模型并运行基础示例
+uv run examples/vibevoice/vibevoice_example.py --download
+
+# 下载模型并运行流式示例
+uv run examples/vibevoice/vibevoice_example.py --download --streaming
+```
+
+**或使用传统 Python 方式**：
+
+```bash
+# 使用镜像站点下载（推荐）
+python examples/vibevoice/vibevoice_example.py --download-only --mirror
+
+# 仅下载模型
+python examples/vibevoice/vibevoice_example.py --download-only
+
+# 下载模型并运行基础示例
+python examples/vibevoice/vibevoice_example.py --download
+
+# 下载模型并运行流式示例
+python examples/vibevoice/vibevoice_example.py --download --streaming
+
+# 查看模型路径信息
+python examples/vibevoice/vibevoice_example.py --show-path
+```
+
+**镜像站点说明**：
+- 镜像站点：https://hf-mirror.com
+- 适合中国大陆用户，下载速度更快
+- 使用 `--mirror` 参数会自动从镜像站点下载
+- 也可以通过环境变量设置：`export HF_ENDPOINT=https://hf-mirror.com`
+
+### 2. 查看模型路径
+
+```bash
+# 查看模型下载路径和缓存信息
+uv run examples/vibevoice/vibevoice_example.py --show-path
+
+# 或使用传统 Python 方式
+python examples/vibevoice/vibevoice_example.py --show-path
+```
+
+**模型默认存储位置**：
+- **macOS/Linux**: `~/.cache/huggingface/hub/models--microsoft--VibeVoice-Realtime-0.5B`
+- **Windows**: `C:\Users\<用户名>\.cache\huggingface\hub\models--microsoft--VibeVoice-Realtime-0.5B`
+
+**自定义缓存路径**：
+可以通过设置环境变量来更改缓存目录：
+```bash
+export HF_HOME=/path/to/your/cache
+```
+
+### 3. 运行示例（模型会自动下载）
 
 **推荐使用 uv 运行**（推荐）：
 
 ```bash
-# 从项目根目录运行基础示例
+# 从项目根目录运行基础示例（首次运行会自动下载模型）
 uv run examples/vibevoice/vibevoice_example.py
 
 # 运行流式输入示例
@@ -67,7 +132,7 @@ uv run examples/vibevoice/vibevoice_example.py --demo
 **或使用传统 Python 方式**：
 
 ```bash
-# 从项目根目录运行基础示例
+# 从项目根目录运行基础示例（首次运行会自动下载模型）
 python examples/vibevoice/vibevoice_example.py
 
 # 运行流式输入示例
@@ -75,6 +140,14 @@ python examples/vibevoice/vibevoice_example.py --streaming
 
 # 查看官方演示脚本使用方法
 python examples/vibevoice/vibevoice_example.py --demo
+```
+
+### 4. 使用官方演示脚本
+
+```bash
+# 在 VibeVoice 目录中运行
+cd VibeVoice/
+python demo/vibevoice_realtime_demo.py --model_path microsoft/VibeVoice-Realtime-0.5B
 ```
 
 ## 系统要求
@@ -92,6 +165,7 @@ python examples/vibevoice/vibevoice_example.py --demo
 - `soundfile>=0.12.0`
 - `numpy>=1.24.0`
 - `scipy>=1.10.0`
+- `huggingface_hub>=0.20.0` - 用于下载模型
 
 安装 VibeVoice 包时会自动安装其他必需的依赖。
 
@@ -122,12 +196,36 @@ sf.write("output.wav", audio, 24000)
 
 VibeVoice-Realtime 支持流式文本输入，可以在文本生成的同时开始语音合成，实现超低延迟。
 
+## 模型存储位置
+
+模型下载后会存储在 Hugging Face 的默认缓存目录中：
+
+- **默认路径**: `~/.cache/huggingface/hub/`
+- **模型路径**: `~/.cache/huggingface/hub/models--microsoft--VibeVoice-Realtime-0.5B/`
+
+**查看模型路径**：
+```bash
+uv run examples/vibevoice/vibevoice_example.py --show-path
+```
+
+**自定义缓存路径**：
+```bash
+# 设置环境变量
+export HF_HOME=/path/to/your/cache
+
+# 或在代码中指定
+from huggingface_hub import snapshot_download
+snapshot_download(repo_id="microsoft/VibeVoice-Realtime-0.5B", cache_dir="/custom/path")
+```
+
 ## 注意事项
 
 1. **语言支持**: 模型主要针对英语优化，其他语言可能产生不可预测的结果
 2. **首次运行**: 首次运行时会自动从 Hugging Face 下载模型文件，需要网络连接
 3. **GPU 推荐**: 虽然可以在 CPU 上运行，但推荐使用 GPU 以获得更好的性能
-4. **模型大小**: 模型文件约 1GB，下载和加载需要一些时间
+4. **模型大小**: 模型文件约 2GB，下载和加载需要一些时间
+5. **缓存管理**: 模型下载后会缓存在本地，下次使用时无需重新下载
+6. **镜像站点**: 如果访问 Hugging Face 官方站点困难，建议使用 `--mirror` 参数从镜像站点下载
 
 ## 常见问题
 

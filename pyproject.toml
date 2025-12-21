@@ -17,4 +17,5 @@ dependencies = [
     "librosa>=0.10.0",
     "sounddevice>=0.4.6",
     "edge-tts>=6.1.0",
+    "huggingface_hub>=0.20.0",
 ]
