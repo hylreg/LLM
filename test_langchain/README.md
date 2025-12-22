@@ -8,12 +8,13 @@
 - **ollama_example.py** - 使用 LangChain 集成本地 Ollama 模型的示例
 - **structured_output_example.py** - 展示如何使用结构化输出的示例
 - **streaming_output_example.py** - 展示如何实现流式输出的示例
+- **memory_example.py** - 展示如何使用长短期记忆（Memory）功能的示例
 
 ## 环境配置
 
 ### Silicon Flow
 
-对于 Silicon Flow 相关示例（`siliconflow_example.py`、`structured_output_example.py`、`streaming_output_example.py`），需要设置环境变量：
+对于 Silicon Flow 相关示例（`siliconflow_example.py`、`structured_output_example.py`、`streaming_output_example.py`、`memory_example.py`），需要设置环境变量：
 
 ```bash
 export SILICONFLOW_API_KEY=your_siliconflow_api_key
@@ -130,6 +131,48 @@ result = extract_person_info(text)
 print(f"姓名: {result.name}, 年龄: {result.age}, 技能: {result.skills}")
 ```
 
+### 5. 长短期记忆示例
+
+**文件**：`memory_example.py`
+
+演示如何使用 LangChain 的不同记忆类型来管理对话上下文，包括完整记忆、窗口记忆、摘要记忆和混合记忆。
+
+```bash
+python test_langchain/memory_example.py
+```
+
+**代码示例**：
+
+```python
+from test_langchain.memory_example import create_siliconflow_model
+from langchain.memory import ConversationBufferMemory
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+
+model = create_siliconflow_model()
+memory = ConversationBufferMemory(return_messages=True, memory_key="history")
+
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "你是一个友好的AI助手。"),
+    MessagesPlaceholder(variable_name="history"),
+    ("human", "{input}")
+])
+
+chain = prompt | model
+memory_variables = memory.load_memory_variables({})
+response = chain.invoke({
+    "input": "你好，我叫张三",
+    "history": memory_variables.get("history", [])
+})
+memory.save_context({"input": "你好，我叫张三"}, {"output": response.content})
+```
+
+**记忆类型说明**：
+
+1. **ConversationBufferMemory** - 完整保存所有对话历史，适合短对话
+2. **ConversationBufferWindowMemory** - 只保存最近N轮对话，适合控制token消耗
+3. **ConversationSummaryMemory** - 使用摘要压缩历史对话，适合长对话
+4. **ConversationSummaryBufferMemory** - 结合摘要和窗口，平衡长期和短期记忆
+
 ## 技术实现
 
 ### Silicon Flow 模型集成
@@ -197,6 +240,26 @@ result = structured_llm.invoke("从文本中提取信息...")
 for chunk in model.stream(messages):
     if chunk.content:
         print(chunk.content, end="", flush=True)
+```
+
+### 记忆（Memory）管理
+
+使用不同的记忆类型来管理对话上下文：
+
+```python
+from langchain.memory import ConversationBufferMemory, ConversationBufferWindowMemory
+
+# 完整记忆
+memory = ConversationBufferMemory(return_messages=True, memory_key="history")
+
+# 窗口记忆（只保留最近2轮）
+window_memory = ConversationBufferWindowMemory(k=2, return_messages=True, memory_key="history")
+
+# 在提示模板中使用记忆
+prompt = ChatPromptTemplate.from_messages([
+    MessagesPlaceholder(variable_name="history"),
+    ("human", "{input}")
+])
 ```
 
 ## 可用模型
