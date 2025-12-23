@@ -78,6 +78,7 @@ def _run_microphone_mode():
     print("\n准备开始录音...")
     print("-" * 60)
     
+    stt = None
     try:
         # 创建转录器
         stt = SpeechToText(model_name=model_name)
@@ -105,6 +106,10 @@ def _run_microphone_mode():
         print(f"\n错误: {e}")
         import traceback
         traceback.print_exc()
+    finally:
+        # 清理资源
+        if stt is not None:
+            stt.cleanup()
 
 
 def main():
@@ -171,6 +176,7 @@ def main():
     print("\n开始转录...")
     print("-" * 60)
     
+    stt = None
     try:
         # 创建转录器
         stt = SpeechToText(model_name=model_name)
@@ -195,6 +201,10 @@ def main():
         print(f"\n错误: {e}")
         import traceback
         traceback.print_exc()
+    finally:
+        # 清理资源
+        if stt is not None:
+            stt.cleanup()
 
 
 if __name__ == "__main__":

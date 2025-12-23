@@ -22,6 +22,8 @@ import torch
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
 from typing import Optional, Union
 import warnings
+import atexit
+import multiprocessing
 
 try:
     import librosa
@@ -37,6 +39,26 @@ except ImportError:
 
 # 忽略一些警告信息
 warnings.filterwarnings("ignore")
+
+# 设置多进程启动方法，避免资源泄漏
+if hasattr(multiprocessing, 'set_start_method'):
+    try:
+        multiprocessing.set_start_method('spawn', force=True)
+    except RuntimeError:
+        # 如果已经设置过，忽略错误
+        pass
+
+# 注册清理函数，在程序退出时清理资源
+def _cleanup_resources():
+    """清理多进程资源"""
+    try:
+        # 清理 PyTorch 的多进程资源
+        if hasattr(torch.multiprocessing, 'shutdown'):
+            torch.multiprocessing.shutdown()
+    except Exception:
+        pass
+
+atexit.register(_cleanup_resources)
 
 
 class SpeechToText:
@@ -68,6 +90,29 @@ class SpeechToText:
         self.model.eval()
         
         print("模型加载完成！")
+    
+    def cleanup(self):
+        """清理资源，释放模型和内存"""
+        try:
+            # 清理模型
+            if hasattr(self, 'model'):
+                del self.model
+            if hasattr(self, 'processor'):
+                del self.processor
+            
+            # 清理 CUDA 缓存
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            
+            # 强制垃圾回收
+            import gc
+            gc.collect()
+        except Exception:
+            pass
+    
+    def __del__(self):
+        """析构函数，确保资源被清理"""
+        self.cleanup()
     
     def transcribe(
         self, 
@@ -105,27 +150,24 @@ class SpeechToText:
             )
             inputs = {k: v.to(self.device) for k, v in inputs.items()}
             
-            # 设置语言
-            if language and language != "auto":
-                # 强制指定语言
-                forced_decoder_ids = self.processor.get_decoder_prompt_ids(
-                    language=language, 
-                    task="transcribe"
-                )
-            else:
-                forced_decoder_ids = None
-            
             # 生成转录
             with torch.no_grad():
-                if forced_decoder_ids:
-                    generated_ids = self.model.generate(
-                        inputs["input_features"],
-                        forced_decoder_ids=forced_decoder_ids
-                    )
-                else:
-                    generated_ids = self.model.generate(
-                        inputs["input_features"]
-                    )
+                # 设置生成参数以加快速度
+                generate_kwargs = {
+                    "max_length": 448,  # 限制最大长度
+                    "num_beams": 1,  # 不使用beam search以加快速度
+                    "do_sample": False,  # 使用贪心解码
+                }
+                
+                # 使用现代方法设置语言和任务
+                if language and language != "auto":
+                    generate_kwargs["language"] = language
+                    generate_kwargs["task"] = "transcribe"
+                
+                generated_ids = self.model.generate(
+                    inputs["input_features"],
+                    **generate_kwargs
+                )
             
             # 解码转录结果
             transcription = self.processor.batch_decode(
@@ -146,13 +188,19 @@ class SpeechToText:
         except Exception as e:
             raise Exception(f"转录失败: {str(e)}")
     
-    def transcribe_stream(self, audio_data, sample_rate: int = 16000) -> str:
+    def transcribe_stream(
+        self, 
+        audio_data, 
+        sample_rate: int = 16000,
+        language: Optional[str] = None
+    ) -> str:
         """
         实时流式音频转文字（适用于实时录音场景）
         
         Args:
             audio_data: 音频数据（numpy array 或 bytes）
             sample_rate: 采样率
+            language: 音频语言代码，例如 "zh" (中文), "en" (英文), "auto" (自动检测)
             
         Returns:
             转录的文字
@@ -162,35 +210,80 @@ class SpeechToText:
         
         import numpy as np
         
-        # 如果输入是bytes，转换为numpy array
-        if isinstance(audio_data, bytes):
-            audio_array = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
-        else:
-            audio_array = audio_data
-        
-        # 确保采样率为16kHz
-        if sample_rate != 16000:
-            audio_array = librosa.resample(audio_array, orig_sr=sample_rate, target_sr=16000)
-        
-        # 预处理
-        inputs = self.processor(
-            audio_array,
-            sampling_rate=16000,
-            return_tensors="pt"
-        )
-        inputs = {k: v.to(self.device) for k, v in inputs.items()}
-        
-        # 生成转录
-        with torch.no_grad():
-            generated_ids = self.model.generate(inputs["input_features"])
-        
-        # 解码
-        transcription = self.processor.batch_decode(
-            generated_ids,
-            skip_special_tokens=True
-        )[0]
-        
-        return transcription
+        try:
+            print("开始处理音频数据...", flush=True)
+            
+            # 如果输入是bytes，转换为numpy array
+            if isinstance(audio_data, bytes):
+                audio_array = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
+            else:
+                audio_array = audio_data
+            
+            # 确保音频数组是1D的
+            if len(audio_array.shape) > 1:
+                print(f"检测到多维数组，形状: {audio_array.shape}，正在转换为1D数组...", flush=True)
+                audio_array = audio_array.flatten() if audio_array.shape[1] == 1 else np.mean(audio_array, axis=1)
+            
+            print(f"音频数组形状: {audio_array.shape}, 数据类型: {audio_array.dtype}", flush=True)
+            
+            # 确保采样率为16kHz
+            if sample_rate != 16000:
+                print(f"重新采样: {sample_rate} -> 16000 Hz", flush=True)
+                audio_array = librosa.resample(audio_array, orig_sr=sample_rate, target_sr=16000)
+                print(f"重新采样后形状: {audio_array.shape}", flush=True)
+            
+            # 预处理
+            print("正在预处理音频...", flush=True)
+            inputs = self.processor(
+                audio_array,
+                sampling_rate=16000,
+                return_tensors="pt"
+            )
+            inputs = {k: v.to(self.device) for k, v in inputs.items()}
+            print(f"预处理完成，输入形状: {inputs['input_features'].shape}", flush=True)
+            
+            # 生成转录
+            print("正在设置语言参数...", flush=True)
+            if language and language != "auto":
+                print(f"已设置语言: {language}", flush=True)
+            else:
+                print("使用自动语言检测", flush=True)
+            
+            print("正在生成转录结果（这可能需要一些时间，请耐心等待）...", flush=True)
+            with torch.no_grad():
+                # 设置生成参数以加快速度
+                generate_kwargs = {
+                    "max_length": 448,  # 限制最大长度
+                    "num_beams": 1,  # 不使用beam search以加快速度
+                    "do_sample": False,  # 使用贪心解码
+                }
+                
+                # 使用现代方法设置语言和任务
+                if language and language != "auto":
+                    generate_kwargs["language"] = language
+                    generate_kwargs["task"] = "transcribe"
+                
+                generated_ids = self.model.generate(
+                    inputs["input_features"],
+                    **generate_kwargs
+                )
+            
+            print(f"生成完成，生成了 {len(generated_ids[0])} 个token", flush=True)
+            
+            # 解码
+            print("正在解码结果...", end="", flush=True)
+            transcription = self.processor.batch_decode(
+                generated_ids,
+                skip_special_tokens=True
+            )[0]
+            print(" 完成")
+            
+            return transcription
+            
+        except Exception as e:
+            import traceback
+            print(f"\n错误详情: {traceback.format_exc()}")
+            raise Exception(f"流式转录失败: {str(e)}")
     
     def record_from_microphone(
         self,
@@ -228,9 +321,14 @@ class SpeechToText:
         
         print("完成！\n")
         
-        # 如果是立体声，转换为单声道（取平均值）
-        if channels == 2 and len(audio_data.shape) > 1:
-            audio_data = np.mean(audio_data, axis=1)
+        # 确保返回1D数组
+        if len(audio_data.shape) > 1:
+            if channels == 2:
+                # 如果是立体声，转换为单声道（取平均值）
+                audio_data = np.mean(audio_data, axis=1)
+            else:
+                # 如果是单声道但返回2D数组，展平它
+                audio_data = audio_data.flatten()
         
         return audio_data
     
@@ -251,16 +349,40 @@ class SpeechToText:
         Returns:
             转录的文字
         """
-        # 录音
-        audio_data = self.record_from_microphone(
-            duration=duration,
-            sample_rate=sample_rate,
-            channels=1
-        )
-        
-        # 转录
-        print("正在转录...")
-        result = self.transcribe_stream(audio_data, sample_rate=sample_rate)
-        
-        return result
+        try:
+            # 录音
+            audio_data = self.record_from_microphone(
+                duration=duration,
+                sample_rate=sample_rate,
+                channels=1
+            )
+            
+            # 检查音频数据是否有效
+            import numpy as np
+            if audio_data is None or len(audio_data) == 0:
+                raise ValueError("录音数据为空，请检查麦克风是否正常工作")
+            
+            # 检查音频是否全是静音
+            audio_max = np.max(np.abs(audio_data))
+            if audio_max < 0.01:  # 如果最大音量很小，可能是静音
+                print("警告: 检测到音频音量很小，可能是静音或麦克风未正常工作")
+            
+            print(f"音频数据长度: {len(audio_data)} 采样点")
+            print(f"音频数据范围: [{np.min(audio_data):.4f}, {np.max(audio_data):.4f}]")
+            
+            # 转录
+            print("正在转录...")
+            print(f"使用语言设置: {language}")
+            result = self.transcribe_stream(
+                audio_data, 
+                sample_rate=sample_rate,
+                language=language
+            )
+            
+            return result
+            
+        except Exception as e:
+            import traceback
+            print(f"\n错误详情: {traceback.format_exc()}")
+            raise Exception(f"麦克风转录失败: {str(e)}")
 

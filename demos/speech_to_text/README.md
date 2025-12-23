@@ -28,7 +28,6 @@
 
 ```bash
 # 在项目根目录执行
-cd /home/lab/Projects/LLM
 uv sync
 ```
 
@@ -91,7 +90,21 @@ result = stt.transcribe("audio.wav", language="auto")
 print(result)
 ```
 
-### 示例4：运行示例脚本
+### 示例4：资源清理
+
+```python
+from demos.speech_to_text import SpeechToText
+
+stt = SpeechToText(model_name="openai/whisper-small")
+try:
+    result = stt.transcribe("audio.wav", language="zh")
+    print(result)
+finally:
+    # 使用完毕后清理资源
+    stt.cleanup()
+```
+
+### 示例5：运行示例脚本
 
 ```bash
 uv run python -m demos.speech_to_text.examples
@@ -152,15 +165,22 @@ uv run python -m demos.speech_to_text.examples
 
 **返回**：numpy array格式的音频数据
 
-#### `transcribe_stream(audio_data, sample_rate=16000)`
+#### `transcribe_stream(audio_data, sample_rate=16000, language=None)`
 
 实时流式音频转文字。
 
 **参数**：
 - `audio_data`: 音频数据（numpy array 或 bytes）
-- `sample_rate` (int): 采样率
+- `sample_rate` (int): 采样率，默认16000
+- `language` (str, optional): 语言代码，"zh"、"en"、"auto"等，None 表示自动检测
 
 **返回**：转录的文字字符串
+
+#### `cleanup()`
+
+清理资源，释放模型和内存。建议在不再使用转录器时调用此方法。
+
+**注意**：对象销毁时会自动调用此方法，但显式调用可以更及时地释放资源。
 
 ## 注意事项
 
@@ -168,6 +188,8 @@ uv run python -m demos.speech_to_text.examples
 2. **模型存储**：模型会下载到 `~/.cache/huggingface/` 目录
 3. **GPU支持**：如果有GPU，会自动使用GPU加速（需要安装CUDA版本的PyTorch）
 4. **麦克风功能**：需要系统有可用的麦克风设备，Linux系统可能需要安装 `portaudio` 相关库
+5. **资源管理**：使用完毕后建议调用 `cleanup()` 方法释放资源，特别是在批量处理多个文件时
+6. **多进程资源**：程序会自动处理多进程资源清理，避免资源泄漏警告
 
 ## 常见问题
 

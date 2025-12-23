@@ -41,16 +41,19 @@ def example_file_transcription():
     # 创建转录器（使用small模型，推荐）
     stt = SpeechToText(model_name="openai/whisper-small")
     
-    # 转录音频文件（请替换为你的音频文件路径）
-    audio_file = "test_audio.wav"
-    
-    if os.path.exists(audio_file):
-        result = stt.transcribe(audio_file, language="zh")
-        print(f"\n音频文件: {audio_file}")
-        print(f"转录结果: {result}\n")
-    else:
-        print(f"\n提示: 请准备音频文件 '{audio_file}' 进行测试")
-        print("支持的格式: WAV, MP3, M4A, FLAC, OGG 等\n")
+    try:
+        # 转录音频文件（请替换为你的音频文件路径）
+        audio_file = "test_audio.wav"
+        
+        if os.path.exists(audio_file):
+            result = stt.transcribe(audio_file, language="zh")
+            print(f"\n音频文件: {audio_file}")
+            print(f"转录结果: {result}\n")
+        else:
+            print(f"\n提示: 请准备音频文件 '{audio_file}' 进行测试")
+            print("支持的格式: WAV, MP3, M4A, FLAC, OGG 等\n")
+    finally:
+        stt.cleanup()
 
 
 def example_english_transcription():
@@ -61,14 +64,17 @@ def example_english_transcription():
     
     stt = SpeechToText(model_name="openai/whisper-small")
     
-    audio_file = "test_english.wav"
-    
-    if os.path.exists(audio_file):
-        result = stt.transcribe(audio_file, language="en")
-        print(f"\n音频文件: {audio_file}")
-        print(f"转录结果: {result}\n")
-    else:
-        print(f"\n提示: 请准备英文音频文件 '{audio_file}' 进行测试\n")
+    try:
+        audio_file = "test_english.wav"
+        
+        if os.path.exists(audio_file):
+            result = stt.transcribe(audio_file, language="en")
+            print(f"\n音频文件: {audio_file}")
+            print(f"转录结果: {result}\n")
+        else:
+            print(f"\n提示: 请准备英文音频文件 '{audio_file}' 进行测试\n")
+    finally:
+        stt.cleanup()
 
 
 def example_auto_detect_language():
@@ -79,15 +85,18 @@ def example_auto_detect_language():
     
     stt = SpeechToText(model_name="openai/whisper-small")
     
-    audio_file = "test_audio.wav"
-    
-    if os.path.exists(audio_file):
-        # 使用 "auto" 让模型自动检测语言
-        result = stt.transcribe(audio_file, language="auto")
-        print(f"\n音频文件: {audio_file}")
-        print(f"转录结果: {result}\n")
-    else:
-        print(f"\n提示: 请准备音频文件 '{audio_file}' 进行测试\n")
+    try:
+        audio_file = "test_audio.wav"
+        
+        if os.path.exists(audio_file):
+            # 使用 "auto" 让模型自动检测语言
+            result = stt.transcribe(audio_file, language="auto")
+            print(f"\n音频文件: {audio_file}")
+            print(f"转录结果: {result}\n")
+        else:
+            print(f"\n提示: 请准备音频文件 '{audio_file}' 进行测试\n")
+    finally:
+        stt.cleanup()
 
 
 def example_microphone_transcription():
@@ -98,17 +107,20 @@ def example_microphone_transcription():
     
     stt = SpeechToText(model_name="openai/whisper-small")
     
-    # 从麦克风录音并转录（默认5秒，中文）
-    result = stt.transcribe_from_microphone(
-        duration=5.0,
-        language="zh"
-    )
-    
-    print("\n转录结果:")
-    print("=" * 60)
-    print(result)
-    print("=" * 60)
-    print()
+    try:
+        # 从麦克风录音并转录（默认5秒，中文）
+        result = stt.transcribe_from_microphone(
+            duration=5.0,
+            language="zh"
+        )
+        
+        print("\n转录结果:")
+        print("=" * 60)
+        print(result)
+        print("=" * 60)
+        print()
+    finally:
+        stt.cleanup()
 
 
 def example_different_models():
@@ -131,12 +143,16 @@ def example_different_models():
     
     for model_name, description in models:
         print(f"\n使用模型: {description} ({model_name})")
+        stt = None
         try:
             stt = SpeechToText(model_name=model_name)
             result = stt.transcribe(audio_file, language="zh")
             print(f"转录结果: {result}")
         except Exception as e:
             print(f"错误: {e}")
+        finally:
+            if stt is not None:
+                stt.cleanup()
 
 
 def example_langchain_integration():
@@ -145,6 +161,7 @@ def example_langchain_integration():
     print("示例6：与LangChain集成")
     print("=" * 60)
     
+    stt = None
     try:
         from langchain.tools import Tool
         from langchain.chat_models import init_chat_model
@@ -192,6 +209,9 @@ def example_langchain_integration():
     except Exception as e:
         print(f"集成示例出错: {e}")
         print("提示: 需要设置 SILICONFLOW_API_KEY 环境变量\n")
+    finally:
+        if stt is not None:
+            stt.cleanup()
 
 
 def main():
