@@ -16,4 +16,5 @@ dependencies = [
     "scipy>=1.10.0",
     "librosa>=0.10.0",
     "sounddevice>=0.4.6",
+    "edge-tts>=6.1.0",
 ]
